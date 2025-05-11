@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Marcador Rifa</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#4caf50" />
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      font-family: Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      background: #000000;
+    }
+
+    header {
+      padding: 2vh;
+      text-align: center;
+      flex: 0 0 auto;
+      background-color: #2ebce0;
+      color: white;
+    }
+
+    #titleInput {
+      font-size: 6vw;
+      font-weight: bold;
+      background: transparent;
+      border: none;
+      text-align: center;
+      color: white;
+      width: 100%;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      grid-template-rows: repeat(10, 1fr);
+      flex: 1 1 auto;
+      padding: 1vw;
+      box-sizing: border-box;
+      width: 100%;
+      height: calc(100vh - 30vh);
+      
+      background-color: #ffffff;
+    }
+
+    .cell {
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: 0.2s;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3.5vw;
+    }
+
+    .cell.marked {
+      color: white;
+      border-color: #388e3c;
+    }
+
+    .controls {
+      display: none;
+      padding: 1em;
+      text-align: center;
+      background: #f9f9f9;
+      border-top: 1px solid #ccc;
+    }
+
+    .controls.visible {
+      display: block;
+    }
+
+    .control-group {
+      margin: 0.5em 0;
+    }
+
+    .controls label {
+      font-weight: bold;
+      margin-right: 1em;
+      font-size: 1rem;
+    }
+
+    .controls input[type="color"] {
+      border: none;
+      width: 40px;
+      height: 30px;
+      cursor: pointer;
+    }
+
+    .controls button {
+      margin-top: 1em;
+      padding: 0.5em 1.5em;
+      font-size: 1rem;
+      border: none;
+      background-color: #e53935;
+      color: white;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .controls button:hover {
+      background-color: #c62828;
+    }
+
+    @media (max-width: 600px) {
+      #titleInput {
+        font-size: 8vw;
+      }
+      .cell {
+        font-size: 5vw;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <input type="text" id="titleInput" value="Bingo" title="Doble clic para mostrar controles" />
+  </header>
+
+  <div class="grid" id="grid"></div>
+
+  <div class="controls">
+    <div class="control-group">
+      <label>
+        Color del encabezado:
+        <input type="color" id="headerColor" value="#2ebce0">
+      </label>
+    </div>
+    <div class="control-group">
+      <label>
+        Color de los marcados:
+        <input type="color" id="markedColor" value="#4caf50">
+      </label>
+    </div>
+    <button id="resetBtn">Reiniciar tabla</button>
+  </div>
+
+  <script>
+    const grid = document.getElementById("grid");
+    const savedMarks = JSON.parse(localStorage.getItem("markedNumbers")) || [];
+
+    for (let i = 1; i < 91; i++) {
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      cell.textContent = i.toString().padStart(2, "0");
+      if (savedMarks.includes(i)) {
+        cell.classList.add("marked");
+        const markedColor = localStorage.getItem("markedColor") || "#4caf50";
+        cell.style.background = markedColor;
+      }
+      cell.addEventListener("click", () => {
+        const index = savedMarks.indexOf(i);
+        cell.classList.toggle("marked");
+
+        if (cell.classList.contains("marked")) {
+          if (index === -1) savedMarks.push(i);
+          const markedColor = localStorage.getItem("markedColor") || "#4caf50";
+          cell.style.background = markedColor;
+        } else {
+          if (index !== -1) savedMarks.splice(index, 1);
+          cell.style.background = "white";
+        }
+
+        localStorage.setItem("markedNumbers", JSON.stringify(savedMarks));
+      });
+      grid.appendChild(cell);
+    }
+
+    // Título personalizado
+    const titleInput = document.getElementById("titleInput");
+    const savedTitle = localStorage.getItem("customTitle");
+    if (savedTitle) {
+      titleInput.value = savedTitle;
+    }
+
+    titleInput.addEventListener("input", () => {
+      localStorage.setItem("customTitle", titleInput.value);
+    });
+
+    // Mostrar/ocultar controles
+    function toggleControls() {
+      document.querySelector(".controls").classList.toggle("visible");
+    }
+
+    // Mostrar controles al hacer doble clic en el título
+    titleInput.addEventListener("dblclick", toggleControls);
+
+    // Mostrar controles con Ctrl+M o Cmd+M
+    document.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "m") {
+    e.preventDefault();
+    toggleControls();
+    }
+    });
+
+    // Color settings
+    const headerColor = document.getElementById("headerColor");
+    const markedColor = document.getElementById("markedColor");
+
+    function applySavedColors() {
+      const header = localStorage.getItem("headerColor");
+      const marked = localStorage.getItem("markedColor");
+
+      if (header) {
+        document.querySelector("header").style.backgroundColor = header;
+        headerColor.value = header;
+      }
+
+      if (marked) {
+        markedColor.value = marked;
+        document.querySelectorAll(".cell.marked").forEach(cell => {
+          cell.style.background = marked;
+        });
+      }
+    }
+
+    applySavedColors();
+
+    headerColor.addEventListener("input", () => {
+      document.querySelector("header").style.backgroundColor = headerColor.value;
+      localStorage.setItem("headerColor", headerColor.value);
+    });
+
+    markedColor.addEventListener("input", () => {
+      document.querySelectorAll(".cell.marked").forEach(cell => {
+        cell.style.background = markedColor.value;
+      });
+      localStorage.setItem("markedColor", markedColor.value);
+    });
+
+    // Botón de reinicio
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      if (confirm("¿Seguro que deseas reiniciar los marcados?")) {
+        localStorage.removeItem("markedNumbers");
+        document.querySelectorAll(".cell.marked").forEach(cell => {
+          cell.classList.remove("marked");
+          cell.style.background = "white";
+        });
+      }
+    });
+
+    // Aplicar color marcado en tiempo real
+    grid.addEventListener("click", e => {
+      if (e.target.classList.contains("cell")) {
+        setTimeout(() => {
+          if (e.target.classList.contains("marked")) {
+            const marked = localStorage.getItem("markedColor") || "#4caf50";
+            e.target.style.background = marked;
+          } else {
+            e.target.style.background = "white";
+          }
+        }, 10);
+      }
+    });
+
+    // Service Worker
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("service-worker.js")
+        .then(reg => console.log("Service Worker registrado", reg))
+        .catch(err => console.error("Error al registrar el Service Worker", err));
+    }
+  </script>
+</body>
+</html>
