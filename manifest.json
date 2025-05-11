@@ -1,6 +1,6 @@
 {
-  "name": "Marcador Rifa",
-  "short_name": "Rifa",
+  "name": "Marcador Bingo",
+  "short_name": "Bingo",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#f8f8f8",
