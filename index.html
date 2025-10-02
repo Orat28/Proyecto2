@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Marcador Bingo</title>
+  <title>Marcador Rifa</title>
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#4caf50" />
   <meta name="mobile-web-app-capable" content="yes">
@@ -40,17 +41,38 @@
       cursor: pointer;
     }
 
+    #lastNumber {
+      font-size: 8vw;
+      font-weight: bold;
+      margin-top: 1vh;
+    }
+
+    #playBtn {
+      margin-top: 1vh;
+      padding: 0.5em 1.5em;
+      font-size: 1.2rem;
+      border: none;
+      background: #4caf50;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    #playBtn:disabled {
+      background: #aaa;
+      cursor: not-allowed;
+    }
+
     .grid {
       display: grid;
       grid-template-columns: repeat(10, 1fr);
-      grid-template-rows: repeat(10, 1fr);
+      grid-template-rows: repeat(9, 1fr); /* 90 casillas */
       flex: 1 1 auto;
       padding: 1vw;
       box-sizing: border-box;
       width: 100%;
-      height: calc(100vh - 30vh);
-      
+      height: calc(100vh - 35vh);
       background-color: #ffffff;
+      gap: 0.5vw;
     }
 
     .cell {
@@ -69,7 +91,8 @@
 
     .cell.marked {
       color: white;
-      border-color: #388e3c;
+      border: 2px solid #222;
+      box-shadow: inset 0 0 6px rgba(0,0,0,0.4);
     }
 
     .controls {
@@ -129,6 +152,8 @@
 <body>
   <header>
     <input type="text" id="titleInput" value="Bingo" title="Doble clic para mostrar controles" />
+    <div id="lastNumber"></div>
+    <button id="playBtn">🎲 Jugar</button>
   </header>
 
   <div class="grid" id="grid"></div>
@@ -153,7 +178,8 @@
     const grid = document.getElementById("grid");
     const savedMarks = JSON.parse(localStorage.getItem("markedNumbers")) || [];
 
-    for (let i = 1; i < 91; i++) {
+    // Crear grilla del 1 al 90
+    for (let i = 1; i <= 90; i++) {
       const cell = document.createElement("div");
       cell.className = "cell";
       cell.textContent = i.toString().padStart(2, "0");
@@ -186,7 +212,6 @@
     if (savedTitle) {
       titleInput.value = savedTitle;
     }
-
     titleInput.addEventListener("input", () => {
       localStorage.setItem("customTitle", titleInput.value);
     });
@@ -195,22 +220,17 @@
     function toggleControls() {
       document.querySelector(".controls").classList.toggle("visible");
     }
-
-    // Mostrar controles al hacer doble clic en el título
     titleInput.addEventListener("dblclick", toggleControls);
-
-    // Mostrar controles con Ctrl+M o Cmd+M
     document.addEventListener("keydown", (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "m") {
-    e.preventDefault();
-    toggleControls();
-    }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "m") {
+        e.preventDefault();
+        toggleControls();
+      }
     });
 
     // Color settings
     const headerColor = document.getElementById("headerColor");
     const markedColor = document.getElementById("markedColor");
-
     function applySavedColors() {
       const header = localStorage.getItem("headerColor");
       const marked = localStorage.getItem("markedColor");
@@ -219,7 +239,6 @@
         document.querySelector("header").style.backgroundColor = header;
         headerColor.value = header;
       }
-
       if (marked) {
         markedColor.value = marked;
         document.querySelectorAll(".cell.marked").forEach(cell => {
@@ -227,14 +246,11 @@
         });
       }
     }
-
     applySavedColors();
-
     headerColor.addEventListener("input", () => {
       document.querySelector("header").style.backgroundColor = headerColor.value;
       localStorage.setItem("headerColor", headerColor.value);
     });
-
     markedColor.addEventListener("input", () => {
       document.querySelectorAll(".cell.marked").forEach(cell => {
         cell.style.background = markedColor.value;
@@ -242,10 +258,49 @@
       localStorage.setItem("markedColor", markedColor.value);
     });
 
+    // -------------------- JUGAR --------------------
+    const playBtn = document.getElementById("playBtn");
+    const lastNumberDiv = document.getElementById("lastNumber");
+
+    let allNumbers = Array.from({ length: 90 }, (_, i) => i + 1);
+    let drawnNumbers = JSON.parse(localStorage.getItem("drawnNumbers")) || [];
+
+    if (drawnNumbers.length > 0) {
+      lastNumberDiv.textContent = drawnNumbers[drawnNumbers.length - 1];
+    }
+
+    playBtn.addEventListener("click", () => {
+      let remaining = allNumbers.filter(n => !drawnNumbers.includes(n));
+      if (remaining.length === 0) {
+        alert("¡Ya salieron todos los números!");
+        playBtn.disabled = true;
+        return;
+      }
+      let randomIndex = Math.floor(Math.random() * remaining.length);
+      let number = remaining[randomIndex];
+
+      drawnNumbers.push(number);
+      localStorage.setItem("drawnNumbers", JSON.stringify(drawnNumbers));
+
+      lastNumberDiv.textContent = number;
+
+      document.querySelectorAll(".cell").forEach(cell => {
+        if (parseInt(cell.textContent) === number) {
+          cell.classList.add("marked");
+          const markedColor = localStorage.getItem("markedColor") || "#4caf50";
+          cell.style.background = markedColor;
+        }
+      });
+    });
+
     // Botón de reinicio
     document.getElementById("resetBtn").addEventListener("click", () => {
-      if (confirm("¿Seguro que deseas reiniciar los marcados?")) {
+      if (confirm("¿Seguro que deseas reiniciar los marcados y sorteos?")) {
         localStorage.removeItem("markedNumbers");
+        localStorage.removeItem("drawnNumbers");
+        drawnNumbers = [];
+        lastNumberDiv.textContent = "";
+        playBtn.disabled = false;
         document.querySelectorAll(".cell.marked").forEach(cell => {
           cell.classList.remove("marked");
           cell.style.background = "white";
